@@ -3,8 +3,8 @@ package crypto
 import (
 	"errors"
 	"fmt"
+	"github.com/younamebert/xlibp2p/common"
 	"testing"
-	"xlibp2p/common"
 )
 
 func TestPubKey2Addr(t *testing.T) {
@@ -30,7 +30,7 @@ func TestPubKey2Addr(t *testing.T) {
 }
 
 func TestPubKeyEncode(t *testing.T) {
-	key,err := GenPrvKey()
+	key, err := GenPrvKey()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestPubKeyEncode(t *testing.T) {
 }
 
 func TestVerifyAddress(t *testing.T) {
-	key,err := GenPrvKey()
+	key, err := GenPrvKey()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,8 +49,8 @@ func TestVerifyAddress(t *testing.T) {
 	}
 	xbs := p.X.Bytes()
 	ybs := p.Y.Bytes()
-	buf := make([]byte, len(xbs) + len(ybs))
-	copy(buf,append(xbs,ybs...))
+	buf := make([]byte, len(xbs)+len(ybs))
+	copy(buf, append(xbs, ybs...))
 	t.Logf("x len: %d, %x", len(xbs), xbs)
 	t.Logf("y len: %d, %x", len(ybs), ybs)
 	t.Logf("buf len: %d, %x", len(buf), buf)

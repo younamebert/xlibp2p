@@ -6,15 +6,15 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/younamebert/xlibp2p/discover"
+	"github.com/younamebert/xlibp2p/log"
 	"io/ioutil"
 	"net"
-	"xlibp2p/discover"
-	"xlibp2p/log"
 )
 
 // Peer to peer connection session
 type peerConn struct {
-	logger log.Logger
+	logger          log.Logger
 	inbound         bool
 	id              discover.NodeId
 	self            discover.NodeId
@@ -23,13 +23,13 @@ type peerConn struct {
 	rw              net.Conn
 	version         uint8
 	handshakeStatus int
-	flag int
+	flag            int
 }
 
 func (c *peerConn) serve() {
 	// Get the address and port number of the client
 	fromAddr := c.rw.RemoteAddr()
-	inbound := c.flag & flagInbound != 0
+	inbound := c.flag&flagInbound != 0
 	if inbound {
 		if err := c.serverHandshake(); err != nil {
 			c.logger.Warnf("handshake error from %s: %v", fromAddr, err)
@@ -59,7 +59,7 @@ func (c *peerConn) clientHandshake() error {
 		id:        c.self,
 		receiveId: c.id,
 	}
-	c.logger.Debugf("send hello request version: %d, id: %s, to receiveId: %s", c.version,c.self, c.id)
+	c.logger.Debugf("send hello request version: %d, id: %s, to receiveId: %s", c.version, c.self, c.id)
 	_, err := c.rw.Write(request.marshal())
 	if err != nil {
 		return err
@@ -96,14 +96,14 @@ func (c *peerConn) serverHandshake() error {
 	if err != nil {
 		return err
 	}
-	c.logger.Debugf("receive handshake request by nodeId %s, version: %d",hello.id, hello.version)
+	c.logger.Debugf("receive handshake request by nodeId %s, version: %d", hello.id, hello.version)
 	if hello.version != c.version {
 		return fmt.Errorf("handshake check err, got version: %d, want version: %d",
 			hello.version, c.version)
 	}
 	gotId := hello.receiveId
 	wantId := c.self
-	if !bytes.Equal(gotId[:], wantId[:])  {
+	if !bytes.Equal(gotId[:], wantId[:]) {
 		return fmt.Errorf("handshake check err got my name: 0x%x, my real name: 0x%x",
 			gotId, wantId)
 	}

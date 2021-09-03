@@ -6,6 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	p2p "github.com/younamebert/xlibp2p"
+	"github.com/younamebert/xlibp2p/crypto"
+	"github.com/younamebert/xlibp2p/discover"
 	"io"
 	"math/rand"
 	"os"
@@ -13,9 +16,6 @@ import (
 	"path"
 	"runtime"
 	"strings"
-	p2p "xlibp2p"
-	"xlibp2p/crypto"
-	"xlibp2p/discover"
 )
 
 type chatProtocol struct {
@@ -28,7 +28,7 @@ func (cp *chatProtocol) Run(p p2p.Peer) error {
 	}
 	cp.ps[p.ID()] = p
 	defer delete(cp.ps, p.ID())
-	out:
+out:
 	for {
 		select {
 		case <-p.QuitCh():
@@ -42,15 +42,14 @@ func (cp *chatProtocol) Run(p p2p.Peer) error {
 	return nil
 }
 
-
 func (cp *chatProtocol) handleMsg(p p2p.Peer) error {
 	ch := p.GetProtocolMsgCh()
 	select {
 	case mr := <-ch:
 		if mr.Type() == 4 {
-			bs,_ := mr.ReadAll()
+			bs, _ := mr.ReadAll()
 			nId := p.ID()
-			fmt.Printf("<(%x...%x): %s\n",nId[:3],nId[len(nId)-3:], string(bs))
+			fmt.Printf("<(%x...%x): %s\n", nId[:3], nId[len(nId)-3:], string(bs))
 		}
 	}
 	return nil
@@ -66,25 +65,25 @@ func (cp *chatProtocol) sendMessage(txt string) {
 }
 
 var (
-	addr string
-	datadir string
-	help bool
+	addr      string
+	datadir   string
+	help      bool
 	bootstrap string
-	maxPeers int
+	maxPeers  int
 )
 
 func init() {
 	flag.StringVar(&addr, "addr", ":9093", "set listen address")
 	flag.StringVar(&datadir, "datadir", "", "set data dir path (default: random folder in current path)")
 	flag.StringVar(&bootstrap, "bootstrap", "", "set bootstrap nodes")
-	flag.IntVar(&maxPeers, "maxpeers", 10,"set bootstrap nodes")
+	flag.IntVar(&maxPeers, "maxpeers", 10, "set bootstrap nodes")
 	flag.BoolVar(&help, "help", false, "this help")
 }
 
 func randomStr(len int) string {
 	cs := "0123456789abcdefghijklmnopqrstuvwxyz"
 	buf := ""
-	for i:=0; i < len; i++ {
+	for i := 0; i < len; i++ {
 		index := rand.Intn(34) + 1
 		buf += string(cs[index])
 	}
@@ -108,7 +107,7 @@ func parseBootstrap(s string) []*discover.Node {
 	}
 	sn := strings.Split(s, ",")
 	buf := make([]*discover.Node, 0)
-	for _,item := range sn {
+	for _, item := range sn {
 		node, err := discover.ParseNode(item)
 		if err != nil {
 			continue
@@ -120,7 +119,6 @@ func parseBootstrap(s string) []*discover.Node {
 func input(fn func(string)) {
 	var (
 		r = bufio.NewReader(os.Stdin)
-
 	)
 	r = bufio.NewReader(os.Stdin)
 	for {
@@ -141,7 +139,7 @@ func input(fn func(string)) {
 }
 func chat(cp *chatProtocol, txt string) {
 	if txt == "/peers" {
-		for pId,_ := range cp.ps {
+		for pId, _ := range cp.ps {
 			fmt.Printf("peer id: %s\n", pId)
 		}
 		return
@@ -161,13 +159,13 @@ func main() {
 	bootNodes := parseBootstrap(bootstrap)
 	srv := p2p.NewServer(p2p.Config{
 		ProtocolVersion: 1,
-		ListenAddr: addr,
-		Key: key,
-		BootstrapNodes: bootNodes,
-		Discover: true,
-		NodeDBPath: datadir,
-		MaxPeers: maxPeers,
-		Logger: logger,
+		ListenAddr:      addr,
+		Key:             key,
+		BootstrapNodes:  bootNodes,
+		Discover:        true,
+		NodeDBPath:      datadir,
+		MaxPeers:        maxPeers,
+		Logger:          logger,
 	})
 	cp := &chatProtocol{}
 	srv.Bind(cp)

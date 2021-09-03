@@ -2,11 +2,11 @@ package p2p
 
 import (
 	"bytes"
+	"github.com/younamebert/xlibp2p/discover"
+	"github.com/younamebert/xlibp2p/log"
 	"io"
 	"net"
 	"time"
-	"xlibp2p/discover"
-	"xlibp2p/log"
 )
 
 type encoder interface {
@@ -34,21 +34,21 @@ type peer struct {
 	ps       []Protocol
 	quit     chan struct{}
 	psCh     chan MessageReader
-	encoder encoder
-	logger log.Logger
+	encoder  encoder
+	logger   log.Logger
 }
 
 // create peer [Peer to peer connection session,Network protocol]
 func newPeer(conn *peerConn, ps []Protocol) Peer {
 	p := &peer{
-		conn:  conn,
-		id:    conn.id,
-		rw:    conn.rw,
+		conn:   conn,
+		id:     conn.id,
+		rw:     conn.rw,
 		logger: conn.logger,
-		ps:    ps,
-		close: make(chan struct{}),
-		quit:  make(chan struct{}),
-		psCh:  make(chan MessageReader),
+		ps:     ps,
+		close:  make(chan struct{}),
+		quit:   make(chan struct{}),
+		psCh:   make(chan MessageReader),
 	}
 	now := time.Now()
 	p.lastTime = now.Unix()
@@ -63,8 +63,9 @@ func (p *peer) QuitCh() chan struct{} {
 	return p.quit
 }
 func (p *peer) Is(flag int) bool {
-	return p.conn.flag & flag != 0
+	return p.conn.flag&flag != 0
 }
+
 // Read heartbeat message
 func (p *peer) readLoop() {
 	for {

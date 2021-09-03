@@ -3,20 +3,19 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"errors"
+	"github.com/younamebert/xlibp2p/discover"
+	"github.com/younamebert/xlibp2p/log"
 	"net"
 	"sync"
 	"time"
-	"xlibp2p/discover"
-	"xlibp2p/log"
 )
 
 const (
-	flagInbound = 1
+	flagInbound  = 1
 	flagOutbound = 1 << 1
-	flagStatic = 1 << 2
-	flagDynamic = 1 << 3
+	flagStatic   = 1 << 2
+	flagDynamic  = 1 << 3
 )
-
 
 type Server interface {
 	Bind(p Protocol)
@@ -30,17 +29,17 @@ type Server interface {
 // You should set them before starting the Server. Fields may not be
 // modified while the server is running.
 type server struct {
-	config Config
-	mu     sync.Mutex
+	config  Config
+	mu      sync.Mutex
 	running bool
 	//protocols contains the protocols supported by the server.
 	//Matching protocols are launched for each peer.
 	protocols []Protocol
 
-	addpeer chan *peerConn
-	delpeer chan Peer
-	table *discover.Table
-	logger log.Logger
+	addpeer    chan *peerConn
+	delpeer    chan Peer
+	table      *discover.Table
+	logger     log.Logger
 	lastLookup time.Time
 }
 
@@ -49,18 +48,18 @@ type Config struct {
 	ProtocolVersion uint8
 	ListenAddr      string
 	Key             *ecdsa.PrivateKey
-	Discover bool
-	NodeDBPath string
+	Discover        bool
+	NodeDBPath      string
 	StaticNodes     []*discover.Node
-	BootstrapNodes []*discover.Node
-	MaxPeers int
-	Logger log.Logger
+	BootstrapNodes  []*discover.Node
+	MaxPeers        int
+	Logger          log.Logger
 }
 
 // NewServer Creates background service object
 func NewServer(config Config) Server {
 	srv := &server{
-		config:  config,
+		config: config,
 		logger: config.Logger,
 	}
 	if config.Logger == nil {
@@ -220,9 +219,9 @@ func (srv *server) newPeerConn(rw net.Conn, flag int, dst *discover.NodeId) *pee
 	pubKey := srv.config.Key.PublicKey
 	mId := discover.PubKey2NodeId(pubKey)
 	c := &peerConn{
-		logger: srv.logger,
+		logger:  srv.logger,
 		self:    mId,
-		flag: flag,
+		flag:    flag,
 		server:  srv,
 		key:     srv.config.Key,
 		rw:      rw,

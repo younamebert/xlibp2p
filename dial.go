@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"container/heap"
 	"crypto/rand"
+	"github.com/younamebert/xlibp2p/discover"
 	"net"
 	"time"
-	"xlibp2p/discover"
 )
+
 const (
 	// This is the amount of time spent waiting in between
 	// redialing a certain node.
@@ -37,11 +38,11 @@ func (t *dialtask) Do(srv *server) {
 	c := srv.newPeerConn(coon, t.flag, &id)
 	c.serve()
 }
+
 type discoverTask struct {
 	bootstrap bool
-	result  []*discover.Node
+	result    []*discover.Node
 }
-
 
 func (t *discoverTask) Do(srv *server) {
 	if t.bootstrap {
@@ -57,6 +58,7 @@ func (t *discoverTask) Do(srv *server) {
 	_, _ = rand.Read(target[:])
 	t.result = srv.table.Lookup(target)
 }
+
 type waitExpireTask struct {
 	time.Duration
 }
@@ -101,24 +103,22 @@ func (h *dialHistory) Pop() interface{} {
 	return x
 }
 
-
 // pastDial is an entry in the dial history.
 type pastDial struct {
 	id  discover.NodeId
 	exp time.Time
 }
 
-
 type dialstate struct {
-	static map[discover.NodeId]*discover.Node
-	ntab discoverTable
-	maxDynDials int
-	dialing map[discover.NodeId]int
-	lookupBuf []*discover.Node
+	static        map[discover.NodeId]*discover.Node
+	ntab          discoverTable
+	maxDynDials   int
+	dialing       map[discover.NodeId]int
+	lookupBuf     []*discover.Node
 	lookupRunning bool
 	bootstrapped  bool
-	randomNodes []*discover.Node
-	hist        *dialHistory
+	randomNodes   []*discover.Node
+	hist          *dialHistory
 }
 type discoverTable interface {
 	Self() *discover.Node
@@ -130,12 +130,12 @@ type discoverTable interface {
 
 func newDialState(static []*discover.Node, table discoverTable, maxdyn int) *dialstate {
 	d := &dialstate{
-		ntab: table,
+		ntab:        table,
 		maxDynDials: maxdyn,
-		static: make(map[discover.NodeId]*discover.Node),
-		dialing: make(map[discover.NodeId]int),
+		static:      make(map[discover.NodeId]*discover.Node),
+		dialing:     make(map[discover.NodeId]int),
 		randomNodes: make([]*discover.Node, maxdyn/2),
-		hist: new(dialHistory),
+		hist:        new(dialHistory),
 	}
 	for _, a := range static {
 		d.static[a.ID] = a
@@ -147,23 +147,23 @@ func (d *dialstate) newTasks(nRunning int, peers map[discover.NodeId]Peer, now t
 	addDial := func(flag int, n *discover.Node) bool {
 		//the connection established needn't to join the pool
 		_, dialing := d.dialing[n.ID]
-		if dialing ||  peers[n.ID] != nil || d.hist.contains(n.ID) {
+		if dialing || peers[n.ID] != nil || d.hist.contains(n.ID) {
 			return false
 		}
 		d.dialing[n.ID] = flag
 		tasks = append(tasks, &dialtask{
 			flag: flag,
-			dest:   n,
+			dest: n,
 		})
 		return true
 	}
 	needDynDials := d.maxDynDials
-	for _,p := range peers {
+	for _, p := range peers {
 		if p.Is(flagDynamic) {
 			needDynDials -= 1
 		}
 	}
-	for _,flag := range d.dialing {
+	for _, flag := range d.dialing {
 		if flag&flagDynamic != 0 {
 			needDynDials -= 1
 		}
@@ -201,7 +201,6 @@ func (d *dialstate) newTasks(nRunning int, peers map[discover.NodeId]Peer, now t
 	return tasks
 }
 
-
 func (d *dialstate) taskDone(t task, now time.Time) {
 	switch mt := t.(type) {
 	case *discoverTask:
@@ -215,5 +214,3 @@ func (d *dialstate) taskDone(t task, now time.Time) {
 		delete(d.dialing, mt.dest.ID)
 	}
 }
-
-

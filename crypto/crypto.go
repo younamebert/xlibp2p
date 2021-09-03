@@ -6,9 +6,9 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
-	"xlibp2p/common"
-	"xlibp2p/common/ahash"
-	"xlibp2p/common/urlsafeb64"
+	"github.com/younamebert/xlibp2p/common"
+	"github.com/younamebert/xlibp2p/common/ahash"
+	"github.com/younamebert/xlibp2p/common/urlsafeb64"
 )
 
 func GenPrvKey() (*ecdsa.PrivateKey, error) {
@@ -29,8 +29,8 @@ func PubKeyEncode(p ecdsa.PublicKey) []byte {
 	}
 	xbs := p.X.Bytes()
 	ybs := p.Y.Bytes()
-	buf := make([]byte, len(xbs) + len(ybs))
-	copy(buf,append(xbs,ybs...))
+	buf := make([]byte, len(xbs)+len(ybs))
+	copy(buf, append(xbs, ybs...))
 	return buf
 }
 
