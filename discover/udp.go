@@ -6,10 +6,10 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/younamebert/xlibp2p/common/rawencode"
 	"io"
 	"net"
 	"time"
-	"xlibp2p/common/rawencode"
 )
 
 const Version = 4
@@ -55,7 +55,7 @@ func nodeFromRPC(rn rpcNode) (n *Node, valid bool) {
 	if rn.IP.IsMulticast() || rn.IP.IsUnspecified() || rn.UDP == 0 {
 		return nil, false
 	}
-	return newNode(rn.IP,rn.TCP, rn.UDP, rn.ID ), true
+	return newNode(rn.IP, rn.TCP, rn.UDP, rn.ID), true
 }
 
 func nodeToRPC(n *Node) rpcNode {
@@ -196,7 +196,7 @@ func (t *udp) findnode(toid NodeId, toaddr *net.UDPAddr, target NodeId) ([]*Node
 		return nreceived >= bucketSize
 	})
 	_ = t.send(toaddr, findnodePacket, findnode{
-		Target: target,
+		Target:     target,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
 	err := <-errc
@@ -334,13 +334,13 @@ func encodePacket(privateKey *ecdsa.PrivateKey, ptype byte, req interface{}) ([]
 	b.WriteByte(ptype)
 	nId := PubKey2NodeId(privateKey.PublicKey)
 	b.Write(nId[:])
-	bs,err := rawencode.Encode(req)
+	bs, err := rawencode.Encode(req)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	bsLen := uint32(len(bs))
-	if (bsLen >> 8 ) > 0 {
-		return nil,fmt.Errorf("out")
+	if (bsLen >> 8) > 0 {
+		return nil, fmt.Errorf("out")
 	}
 	b.WriteByte(byte(uint32(len(bs))))
 	b.Write(bs)
@@ -371,7 +371,7 @@ func (t *udp) readLoop() {
 }
 
 func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
-	buffer :=  bytes.NewBuffer(buf)
+	buffer := bytes.NewBuffer(buf)
 	packet, fromID, err := decodePacket(buffer)
 	if err != nil {
 		//t.logger.Debugf("Bad packet from %v: %v", from, err)
@@ -386,22 +386,21 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	return err
 }
 
-
 type packetHead struct {
-	mType uint8
-	id NodeId
+	mType   uint8
+	id      NodeId
 	dataLen uint8
 }
 
-func decodePacketHead(reader io.Reader) (*packetHead,int,error) {
+func decodePacketHead(reader io.Reader) (*packetHead, int, error) {
 	headerBuf := bytes.NewBuffer(nil)
 	var offset int
-	for headerBuf.Len() < nodeIdLen + 2 {
+	for headerBuf.Len() < nodeIdLen+2 {
 		b := make([]byte, 1)
 		if n, err := reader.Read(b); err != nil {
 			offset += n
 			return nil, offset, err
-		}else {
+		} else {
 			offset += n
 		}
 		headerBuf.Write(b)
@@ -410,12 +409,12 @@ func decodePacketHead(reader io.Reader) (*packetHead,int,error) {
 	h := new(packetHead)
 	h.mType, err = headerBuf.ReadByte()
 	if err != nil {
-		return nil,offset, err
+		return nil, offset, err
 	}
 	nid := NodeId{}
 	_, err = headerBuf.Read(nid[:])
 	if err != nil {
-		return nil,offset, err
+		return nil, offset, err
 	}
 	h.id = nid
 	h.dataLen, err = headerBuf.ReadByte()
@@ -424,12 +423,12 @@ func decodePacketHead(reader io.Reader) (*packetHead,int,error) {
 func decodePacket(reader io.Reader) (packet, NodeId, error) {
 	h, _, err := decodePacketHead(reader)
 	if err != nil {
-		return nil,NodeId{},err
+		return nil, NodeId{}, err
 	}
 	var data = make([]byte, h.dataLen)
 	_, err = reader.Read(data)
 	if err != nil {
-		return nil,NodeId{}, err
+		return nil, NodeId{}, err
 	}
 	var req packet
 	switch ptype := h.mType; ptype {

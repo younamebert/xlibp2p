@@ -3,29 +3,30 @@ package discover
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/younamebert/xlibp2p/common/rawencode"
+	"github.com/younamebert/xlibp2p/crypto"
+	"github.com/younamebert/xlibp2p/storage/badger"
 	"os"
 	"sync"
 	"time"
-	"xlibp2p/common/rawencode"
-	"xlibp2p/crypto"
-	"xlibp2p/storage/badger"
 )
 
 type nodeDB struct {
 	storage *badger.Storage
 	version uint32
-	self NodeId
-	quit chan struct{}
-	runner sync.Once
-	seeder badger.Iterator
+	self    NodeId
+	quit    chan struct{}
+	runner  sync.Once
+	seeder  badger.Iterator
 }
+
 var (
 	nodeDBNilNodeID      = NodeId{}       // Special node ID to use as a nil element.
-	nodeDBNodeExpiration =  24 * time.Hour // Time after which an unseen node should be dropped.
-	nodeDBCleanupCycle   = time.Hour    // Time period for running the expiration task.
+	nodeDBNodeExpiration = 24 * time.Hour // Time after which an unseen node should be dropped.
+	nodeDBCleanupCycle   = time.Hour      // Time period for running the expiration task.
 	//
-	versionKey = []byte("version")
-	nodeDBItemPrefix = []byte("n:")
+	versionKey              = []byte("version")
+	nodeDBItemPrefix        = []byte("n:")
 	nodeDBDiscoverRoot      = ":discover"
 	nodeDBDiscoverPing      = nodeDBDiscoverRoot + ":lastping"
 	nodeDBDiscoverPong      = nodeDBDiscoverRoot + ":lastpong"
@@ -35,19 +36,19 @@ var (
 func newNodeDB(path string, version uint32, self NodeId) (*nodeDB, error) {
 	db := &nodeDB{
 		version: version,
-		self: self,
-		quit: make(chan struct{}),
+		self:    self,
+		quit:    make(chan struct{}),
 	}
 	db.storage = badger.New(path)
 	var currentVer [4]byte
 	binary.LittleEndian.PutUint32(currentVer[:], version)
-	gotVersion,_ := db.storage.GetData(versionKey)
+	gotVersion, _ := db.storage.GetData(versionKey)
 	if gotVersion == nil {
 		if err := db.storage.SetData(versionKey, currentVer[:]); err != nil {
 			db.close()
 			return nil, err
 		}
-	}else if bytes.Compare(gotVersion, currentVer[:]) != 0 {
+	} else if bytes.Compare(gotVersion, currentVer[:]) != 0 {
 		db.close()
 		err := os.RemoveAll(path)
 		if err != nil {
@@ -88,7 +89,7 @@ func splitKey(key []byte) (id NodeId, field string) {
 	return id, field
 }
 func (db *nodeDB) node(id NodeId) *Node {
-	blob,err := db.storage.GetData(makeKey(id, nodeDBDiscoverRoot))
+	blob, err := db.storage.GetData(makeKey(id, nodeDBDiscoverRoot))
 	if err != nil {
 		return nil
 	}
@@ -99,13 +100,14 @@ func (db *nodeDB) node(id NodeId) *Node {
 	node.Hash = crypto.ByteHash256(node.ID[:])
 	return node
 }
+
 // updateNode inserts - potentially overwriting - a node into the peer database.
 func (db *nodeDB) updateNode(node *Node) error {
 	blob, err := rawencode.Encode(node)
 	if err != nil {
 		return err
 	}
-	return db.storage.SetData(makeKey(node.ID,nodeDBDiscoverRoot),blob)
+	return db.storage.SetData(makeKey(node.ID, nodeDBDiscoverRoot), blob)
 }
 
 // deleteNode deletes all information/keys associated with a node.
@@ -118,7 +120,7 @@ func (db *nodeDB) deleteNode(id NodeId) error {
 			continue
 		}
 		nid, _ := splitKey(k)
-		if !bytes.Equal(nid[:],id[:]){
+		if !bytes.Equal(nid[:], id[:]) {
 			continue
 		}
 		err := db.storage.DelData(k)
@@ -176,7 +178,6 @@ func (db *nodeDB) updateLastPong(id NodeId, instance time.Time) error {
 	return db.storeInt64(makeKey(id, nodeDBDiscoverPong), instance.Unix())
 }
 
-
 // expireNodes iterates over the database and deletes all nodes that have not
 // been seen (i.e. received a pong from) for some alloted time.
 func (db *nodeDB) expireNodes() error {
@@ -189,7 +190,7 @@ func (db *nodeDB) expireNodes() error {
 			return nil
 		}
 		// Skip the node if not expired yet (and not self)
-		if bytes.Compare(id[:], db.self[:]) != 0{
+		if bytes.Compare(id[:], db.self[:]) != 0 {
 			if seen := db.lastPong(id); seen.After(threshold) {
 				//db.Logger.Debugf("expired inspect: %s: live", id)
 				return nil
@@ -205,6 +206,7 @@ func (db *nodeDB) expireNodes() error {
 func (db *nodeDB) ensureExpire() {
 	db.runner.Do(func() { go db.expire() })
 }
+
 // expirer should be started in a go routine, and is responsible for looping ad
 // infinitum and dropping stale data from the database.
 func (db *nodeDB) expire() {
@@ -254,4 +256,3 @@ func (db *nodeDB) querySeeds(n int) []*Node {
 	}
 	return nodes
 }
-
